@@ -1,5 +1,6 @@
 import { pool } from "../database";
-import { Person } from "../models/person.interface";
+import { Disability } from "../models";
+import { Person, PersonToSave } from "../models/person.interface";
 import { QueryError, RowDataPacket } from "mysql2";
 
 interface CountResult {
@@ -7,16 +8,75 @@ interface CountResult {
 }
 
 export class PersonRepository {
-  async createPerson(person: Person): Promise<number> {
+  async createPerson(person: PersonToSave): Promise<number> {
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+
     try {
-      const [result] = await pool.query("INSERT INTO Persons SET ?", person);
-      return (result as any).insertId;
+      // Insert into Persons table
+      const [insertPersonResult] = await connection.query<any>(
+        "INSERT INTO Persons SET ?",
+        person.person
+      );
+      const personId = insertPersonResult.insertId;
+
+      const disabilityValues = person.disability.disabilityID?.map(
+        (disabilityId) => [personId, disabilityId]
+      );
+
+      if (disabilityValues?.length) {
+        await connection.query(
+          "INSERT INTO PersonDisabilities (PersonId, DisabilityID) VALUES ?",
+          [disabilityValues]
+        );
+      }
+      const congenitalConditionValues =
+        person.congenitalCondition.conditionID?.map((conditionId) => [
+          personId,
+          conditionId,
+        ]);
+
+      if (congenitalConditionValues?.length) {
+        await connection.query(
+          "INSERT INTO personcongenitalconditions (PersonId, ConditionID) VALUES ?",
+          [congenitalConditionValues]
+        );
+      }
+
+      const acquiredConditionValues = person.acquiredCondition.conditionID?.map(
+        (conditionId) => [personId, conditionId]
+      );
+
+      if (acquiredConditionValues?.length) {
+        await connection.query(
+          "INSERT INTO personacquiredconditions (PersonId, ConditionID) VALUES ?",
+          [acquiredConditionValues]
+        );
+      }
+
+      // Commit transaction if all queries succeed
+      await connection.commit();
+
+      return personId; // Return the PersonId inserted
     } catch (error) {
-      // Handle specific error cases or log the error
-      console.error("Error creating person:", error);
+      // Rollback transaction if any query fails
+      await connection.rollback();
+      console.error("Error creating person with disabilities:", error);
       throw error; // Rethrow the error to propagate it upwards
+    } finally {
+      connection.release(); // Release the connection back to the pool
     }
   }
+  // async createPerson(person: Person): Promise<number> {
+  //   try {
+  //     const [result] = await pool.query("INSERT INTO Persons SET ?", person);
+  //     return (result as any).insertId;
+  //   } catch (error) {
+  //     // Handle specific error cases or log the error
+  //     console.error("Error creating person:", error);
+  //     throw error; // Rethrow the error to propagate it upwards
+  //   }
+  // }
 
   async getPersonById(id: number): Promise<Person | null> {
     try {

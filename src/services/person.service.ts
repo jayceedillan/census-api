@@ -1,10 +1,10 @@
 import { PersonRepository } from "../repositories/person.repository";
-import { Person } from "../models/index";
+import { Person, PersonToSave } from "../models/index";
 
 export class PersonService {
   private personRepository = new PersonRepository();
 
-  async createPerson(person: Person): Promise<number> {
+  async createPerson(person: PersonToSave): Promise<number> {
     return this.personRepository.createPerson(person);
   }
 

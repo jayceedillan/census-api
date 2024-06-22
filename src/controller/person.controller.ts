@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
 import { PersonService } from "../services/person.service";
-import { Person } from "../models/index";
+import { Person, PersonToSave } from "../models/index";
 
 export class PersonController {
   private personService = new PersonService();
 
   createPerson = async (req: Request, res: Response): Promise<void> => {
-    const person: Person = req.body;
     console.log(req.body);
+    const person: PersonToSave = req.body;
+
     const personId = await this.personService.createPerson(person);
     res.status(201).json({ id: personId });
   };

@@ -1,4 +1,3 @@
 export interface Disability {
-  DisabilityID?: number;
-  Name: string;
+  disabilityID?: number[];
 }
